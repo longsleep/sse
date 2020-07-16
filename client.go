@@ -18,8 +18,10 @@ var DefaultClient = &http.Client{}
 
 // Event is a go representation of an http server-sent event
 type Event struct {
-	URI  string
+	URI string
+
 	Type string
+	ID   string
 	Data io.Reader
 }
 
@@ -71,42 +73,61 @@ func Notify(uri string, client *http.Client, getReq getReqFunc, evCh chan<- *Eve
 		return fmt.Errorf("error performing sse request for %s: %v", uri, err)
 	}
 
-	br := bufio.NewReader(res.Body)
+	scanner := bufio.NewScanner(res.Body)
 	defer res.Body.Close()
 
-	delim := []byte{':', ' '}
-
+	// Process event stream as defined in https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation
+	colon := []byte{':'}
 	var currEvent *Event
-
-	for {
-		bs, err := br.ReadBytes('\n')
-
-		if err != nil && err != io.EOF {
-			return err
-		}
-
-		if len(bs) < 2 {
+	var bs []byte
+	var field []byte
+	var value []byte
+	var buf *bytes.Buffer
+	for scanner.Scan() {
+		bs = scanner.Bytes()
+		if len(bs) == 0 {
+			// Empty line, dispatch.
+			if currEvent != nil {
+				evCh <- currEvent
+				currEvent = nil
+			}
+			buf = nil
 			continue
 		}
-
-		spl := bytes.Split(bs, delim)
-
-		if len(spl) < 2 {
+		if bs[0] == colon[0] {
+			// Ignore comments.
 			continue
 		}
-
-		currEvent = &Event{URI: uri}
-		switch string(spl[0]) {
+		spl := bytes.SplitN(bs, colon, 2)
+		if len(spl) == 2 {
+			// Have colon.
+			field = spl[0]
+			// Use rest as value, trim leading space if there.
+			value = bytes.TrimLeft(spl[1], " ")
+		} else {
+			// No colon, treat full value as field with empty value.
+			field = bs
+			value = []byte("")
+		}
+		if currEvent == nil {
+			currEvent = &Event{URI: uri}
+		}
+		// Process field.
+		switch f := string(field); f {
 		case keyEvent:
-			currEvent.Type = string(bytes.TrimSpace(spl[1]))
+			currEvent.Type = string(value)
 		case keyData:
-			currEvent.Data = bytes.NewBuffer(bytes.TrimSpace(spl[1]))
-			evCh <- currEvent
+			if buf == nil {
+				buf = bytes.NewBuffer(value)
+				currEvent.Data = buf
+			} else {
+				buf.Write(value)
+				buf.WriteByte('\n')
+			}
+		case keyID:
+			currEvent.ID = string(value)
 		}
-		if err == io.EOF {
-			break
-		}
-	}
 
-	return nil
+	}
+	return scanner.Err()
 }
