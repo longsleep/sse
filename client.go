@@ -14,7 +14,7 @@ var (
 )
 
 // Client is the default client used for requests.
-var Client = &http.Client{}
+var DefaultClient = &http.Client{}
 
 func makeReqest(method, uri string, body io.Reader) (*http.Request, error) {
 	req, err := GetReq(method, uri, body)
@@ -41,11 +41,11 @@ var GetReq = func(method, uri string, body io.Reader) (*http.Request, error) {
 	return http.NewRequest(method, uri, body)
 }
 
-// Notify takes the uri of an SSE stream and channel, and will send an Event
-// down the channel when recieved, until the stream is closed. It will then
-// close the stream. This is blocking, and so you will likely want to call this
-// in a new goroutine (via `go Notify(..)`)
-func Notify(uri string, evCh chan<- *Event) error {
+// Notify takes the uri of an SSE stream, a http.Client and channel, and will
+// send an Event  down the channel when recieved, until the stream is closed.
+// This is blocking, and so you will likely want to call this in a new goroutine
+// (via `go Notify(..)`). If client is nil, the DefaultClient is used.
+func Notify(uri string, client *http.Client, evCh chan<- *Event) error {
 	if evCh == nil {
 		return ErrNilChan
 	}
@@ -55,7 +55,11 @@ func Notify(uri string, evCh chan<- *Event) error {
 		return fmt.Errorf("error getting sse request: %v", err)
 	}
 
-	res, err := Client.Do(req)
+	if client == nil {
+		client = DefaultClient
+	}
+
+	res, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error performing sse request for %s: %v", uri, err)
 	}

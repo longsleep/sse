@@ -14,9 +14,9 @@ import (
 ```
 
 ```go
-var Client = &http.Client{}
+var DefaultClient = &http.Client{}
 ```
-Client is the default client used for requests.
+DefaultClient is the default client used for requests.
 
 ```go
 var (
@@ -35,11 +35,11 @@ get a request and can be replaces if additional configuration is desired on the
 request. The "Accept" header will necessarily be overwritten.
 
 ```go
-func Notify(uri string, evCh chan<- *Event) error
+func Notify(uri string, client *http.Client, evCh chan<- *Event) error
 ```
-Notify takes the uri of an SSE stream and channel, and will send an Event down
-the channel when recieved, until the stream is closed. It will then close the
-stream. This is blocking, and so you will likely want to call this in a new
+Notify takes the uri of an SSE stream, a http.Client and channel and will send 
+// an Event down the channel when recieved, until the stream is closed. This is 
+blocking, and so you will likely want to call this in a new
 goroutine (via `go Notify(..)`)
 
 ### type Event
