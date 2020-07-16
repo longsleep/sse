@@ -26,7 +26,7 @@ var (
 ```
 
 ```go
-var GetReq = func(verb, uri string, body io.Reader) (*http.Request, error) {
+var DefaultGetReq = func(verb, uri string, body io.Reader) (*http.Request, error) {
 	return http.NewRequest(verb, uri, body)
 }
 ```
@@ -35,12 +35,13 @@ get a request and can be replaces if additional configuration is desired on the
 request. The "Accept" header will necessarily be overwritten.
 
 ```go
-func Notify(uri string, client *http.Client, evCh chan<- *Event) error
+func Notify(uri string, client *http.Client, getReq func(verb, uri string, body io.Reader) (*http.Request, error), evCh chan<- *Event) error
 ```
-Notify takes the uri of an SSE stream, a http.Client and channel and will send 
-// an Event down the channel when recieved, until the stream is closed. This is 
-blocking, and so you will likely want to call this in a new
-goroutine (via `go Notify(..)`)
+Notify takes the uri of an SSE stream, http.Client, request generator function 
+// and a channel and will send an Event down the channel when recieved, until
+// the stream is closed. This is  blocking, and so you will likely want to call
+// this in a new goroutine (via `go Notify(..)`). If client or getReq ire nil, 
+// the DefaultClient and DefaultGetReq values are used.
 
 ### type Event
 
