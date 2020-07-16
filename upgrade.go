@@ -51,8 +51,6 @@ func (up Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (*Conn, error
 		isOpen:   true,
 	}
 
-	notify := w.(http.CloseNotifier).CloseNotify()
-
 	// tell client about retry time
 	if up.RetryTime > 0 {
 		fmt.Fprintf(w, "%s: %s\n", keyRetry, up.RetryTime)
@@ -73,7 +71,7 @@ func (up Upgrader) Upgrade(w http.ResponseWriter, r *http.Request) (*Conn, error
 			case <-conn.shutdown:
 				conn.isOpen = false
 				return
-			case <-notify:
+			case <-r.Context().Done():
 				conn.isOpen = false
 				return
 			}

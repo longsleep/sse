@@ -2,8 +2,8 @@
 [![GoDoc](https://godoc.org/github.com/longsleep/sse?status.svg)](https://godoc.org/github.com/longsleep/sse)
 
 This is a lightweight SEE client and server library for Golang which is designed
-to play nicely along different packages and provide a convient usage. Compatible
-with every Go version since 1.1.
+to play nicely along different packages and provide a convient usage. This
+package uses the context package and thus requires Go 1.7 or later.
 
 ## Client usage
 
